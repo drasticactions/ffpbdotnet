@@ -56,20 +56,11 @@ jobs:
     - name: Create Linux x64 archive
       run: tar -czf ffpb-linux-x64.tar.gz -C dist-linux/x64 .
 
-    - name: Create Linux ARM64 archive
-      run: tar -czf ffpb-linux-arm64.tar.gz -C dist-linux/arm64 .
-
     - name: Upload Linux x64 artifact
       uses: actions/upload-artifact@v4
       with:
         name: ffpb-linux-x64
         path: ffpb-linux-x64.tar.gz
-
-    - name: Upload Linux ARM64 artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ffpb-linux-arm64
-        path: ffpb-linux-arm64.tar.gz
 
   build-macos:
     runs-on: macos-latest
@@ -126,7 +117,6 @@ jobs:
           artifacts/ffpb-windows-x64/ffpb-windows-x64.zip
           artifacts/ffpb-windows-arm64/ffpb-windows-arm64.zip
           artifacts/ffpb-linux-x64/ffpb-linux-x64.tar.gz
-          artifacts/ffpb-linux-arm64/ffpb-linux-arm64.tar.gz
           artifacts/ffpb-macos-universal/ffpb-macos-universal.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

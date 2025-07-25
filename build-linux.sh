@@ -20,26 +20,13 @@ dotnet publish "$PROJECT_PATH" \
     --self-contained \
     -o "$OUTPUT_DIR/x64"
 
-# Build for Linux ARM64
-echo "Building Linux ARM64 binary..."
-dotnet publish "$PROJECT_PATH" \
-    -c Release \
-    -r linux-arm64 \
-    --self-contained \
-    -o "$OUTPUT_DIR/arm64"
-
-# Make binaries executable
+# Make binary executable
 chmod +x "$OUTPUT_DIR/x64/ffpb"
-chmod +x "$OUTPUT_DIR/arm64/ffpb"
 
-echo "Linux binaries created:"
-echo "  x64:   $OUTPUT_DIR/x64/ffpb"
-echo "  ARM64: $OUTPUT_DIR/arm64/ffpb"
+echo "Linux binary created:"
+echo "  x64: $OUTPUT_DIR/x64/ffpb"
 
 # Show file info
 echo ""
 echo "x64 binary info:"
 file "$OUTPUT_DIR/x64/ffpb"
-echo ""
-echo "ARM64 binary info:"
-file "$OUTPUT_DIR/arm64/ffpb"
