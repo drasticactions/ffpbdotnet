@@ -14,8 +14,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
-        dotnet-quality: 'preview'
+        global-json-file: global.json
 
     - name: Build Windows binaries
       run: .\build-windows.ps1
@@ -46,8 +45,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
-        dotnet-quality: 'preview'
+        global-json-file: global.json
 
     - name: Make build script executable
       run: chmod +x build-linux.sh
@@ -81,8 +79,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
-        dotnet-quality: 'preview'
+        global-json-file: global.json
 
     - name: Make build script executable
       run: chmod +x build-macos.sh
