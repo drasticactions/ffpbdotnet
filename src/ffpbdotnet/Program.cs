@@ -1,16 +1,23 @@
-﻿using System.Diagnostics;
+﻿// <copyright file="Program.cs" company="Drastic Actions">
+// Copyright (c) Drastic Actions. All rights reserved.
+// </copyright>
+
+using System.Diagnostics;
 using FFPBDotNet;
 
 namespace FFPBDotNet;
 
-class Program
+/// <summary>
+/// Main entry point for the FFPBDotNet application.
+/// </summary>
+internal class Program
 {
-    static async Task<int> Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         try
         {
             using var notifier = new ProgressNotifier();
-            
+
             var ffmpegArgs = new List<string> { "ffmpeg" };
             ffmpegArgs.AddRange(args);
 
@@ -20,7 +27,7 @@ class Program
                 RedirectStandardError = true,
                 RedirectStandardInput = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             foreach (var arg in args)
@@ -45,7 +52,6 @@ class Program
             var buffer = new char[1];
             var reader = process.StandardError;
 
-            // Start a task to handle stdin forwarding
             var stdinTask = Task.Run(async () =>
             {
                 try
@@ -54,7 +60,7 @@ class Program
                     {
                         if (Console.KeyAvailable)
                         {
-                            var key = Console.ReadKey(false); // Echo to console (false = show the character)
+                            var key = Console.ReadKey(false);
                             if (key.Key == ConsoleKey.Enter)
                             {
                                 await process.StandardInput.WriteLineAsync();
@@ -63,8 +69,10 @@ class Program
                             {
                                 await process.StandardInput.WriteAsync(key.KeyChar);
                             }
+
                             await process.StandardInput.FlushAsync();
                         }
+
                         await Task.Delay(50);
                     }
                 }
@@ -83,19 +91,17 @@ class Program
                 }
                 else
                 {
-                    // Small delay to prevent tight loop
                     await Task.Delay(10);
                 }
             }
 
-            // Wait for stdin task to complete
             try
             {
                 await stdinTask.WaitAsync(TimeSpan.FromSeconds(1));
             }
             catch
             {
-                // Ignore timeout
+                // Ignore timeout or cancellation
             }
 
             await process.WaitForExitAsync();

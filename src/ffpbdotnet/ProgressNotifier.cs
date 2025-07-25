@@ -1,69 +1,83 @@
+// <copyright file="ProgressNotifier.cs" company="Drastic Actions">
+// Copyright (c) Drastic Actions. All rights reserved.
+// </copyright>
+
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace FFPBDotNet;
 
-public class ProgressNotifier : IDisposable
+/// <summary>
+/// A class to handle progress notifications from ffmpeg output.
+/// </summary>
+public class ProgressNotifier(TextWriter? output = null, string? encoding = null) : IDisposable
 {
     private static readonly Regex DurationRegex = new(@"Duration: (\d{2}):(\d{2}):(\d{2})\.\d{2}", RegexOptions.Compiled);
     private static readonly Regex ProgressRegex = new(@"time=(\d{2}):(\d{2}):(\d{2})\.\d{2}", RegexOptions.Compiled);
     private static readonly Regex SourceRegex = new(@"from '(.*)':", RegexOptions.Compiled);
     private static readonly Regex FpsRegex = new(@"(\d{2}\.\d{2}|\d{2}) fps", RegexOptions.Compiled);
 
-    private readonly List<string> _lines = new();
-    private readonly StringBuilder _lineAccumulator = new();
-    private readonly TextWriter _output;
-    private readonly string _encoding;
+    private readonly List<string> lines = new();
+    private readonly StringBuilder lineAccumulator = new();
+    private readonly TextWriter output = output ?? Console.Error;
+    private readonly string encoding = encoding ?? Encoding.UTF8.WebName;
 
-    private int? _duration;
-    private string? _source;
-    private ConsoleProgressBar? _progressBar;
-    private int? _fps;
+    private int? duration;
+    private string? source;
+    private ConsoleProgressBar? progressBar;
+    private int? fps;
 
-    public ProgressNotifier(TextWriter? output = null, string? encoding = null)
-    {
-        _output = output ?? Console.Error;
-        _encoding = encoding ?? Encoding.UTF8.WebName;
-    }
-
+    /// <summary>
+    /// Processes a character from the ffmpeg output.
+    /// </summary>
+    /// <param name="character">The character.</param>
     public void ProcessChar(char character)
     {
         if (character == '\r' || character == '\n')
         {
-            var line = ProcessNewline();
-            
-            _duration ??= GetDuration(line);
-            _source ??= GetSource(line);
-            _fps ??= GetFps(line);
-            
-            UpdateProgress(line);
+            var line = this.ProcessNewline();
+
+            this.duration ??= GetDuration(line);
+            this.source ??= GetSource(line);
+            this.fps ??= GetFps(line);
+
+            this.UpdateProgress(line);
         }
         else
         {
-            _lineAccumulator.Append(character);
-            
+            this.lineAccumulator.Append(character);
+
             // Handle interactive prompts like "[y/N] "
-            if (_lineAccumulator.Length >= 6 && _lineAccumulator.ToString().EndsWith("[y/N] "))
+            if (this.lineAccumulator.Length >= 6 && this.lineAccumulator.ToString().EndsWith("[y/N] "))
             {
                 // Clear any existing progress bar by moving to new line
-                if (_progressBar != null)
+                if (this.progressBar != null)
                 {
-                    _output.WriteLine();
+                    this.output.WriteLine();
                 }
-                
-                _output.Write(_lineAccumulator.ToString());
-                _output.Flush();
-                ProcessNewline();
+
+                this.output.Write(this.lineAccumulator.ToString());
+                this.output.Flush();
+                this.ProcessNewline();
             }
         }
     }
 
-    private string ProcessNewline()
+    /// <summary>
+    /// Gets the last processed line from the ffmpeg output.
+    /// </summary>
+    /// <returns>The last line.</returns>
+    public string GetLastLine()
     {
-        var line = _lineAccumulator.ToString();
-        _lines.Add(line);
-        _lineAccumulator.Clear();
-        return line;
+        return this.lines.LastOrDefault() ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Disposes of the progress notifier, cleaning up any resources used by the progress bar.
+    /// </summary>
+    public void Dispose()
+    {
+        this.progressBar?.Dispose();
     }
 
     private static int? GetFps(string line)
@@ -73,6 +87,7 @@ public class ProgressNotifier : IDisposable
         {
             return (int)Math.Round(fps);
         }
+
         return null;
     }
 
@@ -84,8 +99,9 @@ public class ProgressNotifier : IDisposable
             var hours = int.Parse(match.Groups[1].Value);
             var minutes = int.Parse(match.Groups[2].Value);
             var seconds = int.Parse(match.Groups[3].Value);
-            return (hours * 60 + minutes) * 60 + seconds;
+            return (((hours * 60) + minutes) * 60) + seconds;
         }
+
         return null;
     }
 
@@ -96,60 +112,61 @@ public class ProgressNotifier : IDisposable
         {
             return Path.GetFileName(match.Groups[1].Value);
         }
+
         return null;
+    }
+
+    private string ProcessNewline()
+    {
+        var line = this.lineAccumulator.ToString();
+        this.lines.Add(line);
+        this.lineAccumulator.Clear();
+        return line;
     }
 
     private void UpdateProgress(string line)
     {
         var match = ProgressRegex.Match(line);
-        if (!match.Success) return;
+        if (!match.Success)
+        {
+            return;
+        }
 
         var hours = int.Parse(match.Groups[1].Value);
         var minutes = int.Parse(match.Groups[2].Value);
         var seconds = int.Parse(match.Groups[3].Value);
-        var currentSeconds = (hours * 60 + minutes) * 60 + seconds;
+        var currentSeconds = (((hours * 60) + minutes) * 60) + seconds;
 
-        var total = _duration;
+        var total = this.duration;
         var current = currentSeconds;
 
-        if (_fps.HasValue)
+        if (this.fps.HasValue)
         {
-            current *= _fps.Value;
+            current *= this.fps.Value;
             if (total.HasValue)
             {
-                total *= _fps.Value;
+                total *= this.fps.Value;
             }
         }
 
-        if (_progressBar == null)
+        if (this.progressBar == null)
         {
-            var unit = _fps.HasValue ? " frames" : " seconds";
+            var unit = this.fps.HasValue ? " frames" : " seconds";
             var isWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
-            
-            _progressBar = new ConsoleProgressBar(
-                total ?? int.MaxValue, 
-                _source ?? "Processing", 
-                _output,
+
+            this.progressBar = new ConsoleProgressBar(
+                total ?? int.MaxValue,
+                this.source ?? "Processing",
+                this.output,
                 dynamicColumns: true,
                 unit: unit,
-                isWindows: isWindows
-            );
+                isWindows: isWindows);
         }
 
-        var ticksToUpdate = current - _progressBar.CurrentTick;
+        var ticksToUpdate = current - this.progressBar.CurrentTick;
         if (ticksToUpdate > 0)
         {
-            _progressBar.Tick(ticksToUpdate);
+            this.progressBar.Tick(ticksToUpdate);
         }
-    }
-
-    public string GetLastLine()
-    {
-        return _lines.LastOrDefault() ?? string.Empty;
-    }
-
-    public void Dispose()
-    {
-        _progressBar?.Dispose();
     }
 }

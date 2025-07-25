@@ -1,68 +1,124 @@
+// <copyright file="ConsoleProgressBar.cs" company="Drastic Actions">
+// Copyright (c) Drastic Actions. All rights reserved.
+// </copyright>
+
 using System.Text;
 
 namespace FFPBDotNet;
 
+/// <summary>
+/// A simple console progress bar implementation.
+/// </summary>
 public class ConsoleProgressBar : IDisposable
 {
-    private readonly object _lock = new();
-    private readonly TextWriter _output;
-    private readonly int _totalTicks;
-    private readonly string _description;
-    private readonly bool _dynamicColumns;
-    private readonly string _unit;
-    private readonly bool _isWindows;
+    private readonly object @lock = new();
+    private readonly TextWriter output;
+    private readonly int totalTicks;
+    private readonly string description;
+    private readonly bool dynamicColumns;
+    private readonly string unit;
+    private readonly bool isWindows;
 
-    private int _currentTick;
-    private DateTime _startTime;
-    private string _lastRendered = string.Empty;
-    private bool _disposed;
+    private int currentTick;
+    private DateTime startTime;
+    private string lastRendered = string.Empty;
+    private bool disposed;
 
-    public ConsoleProgressBar(int totalTicks, string description, TextWriter? output = null, 
-        bool dynamicColumns = true, string unit = " items", bool isWindows = false)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConsoleProgressBar"/> class.
+    /// </summary>
+    /// <param name="totalTicks">The total number of ticks (steps) for the progress bar.</param>
+    /// <param name="description">A description to display alongside the progress bar.</param>
+    /// <param name="output">The <see cref="TextWriter"/> to which the progress bar will be written. Defaults to <see cref="Console.Error"/> if null.</param>
+    /// <param name="dynamicColumns">Indicates whether the progress bar should dynamically adjust its width based on the console window size.</param>
+    /// <param name="unit">The unit label to display after the progress count (e.g., " items").</param>
+    /// <param name="isWindows">Specifies whether the progress bar should use Windows-specific rendering behavior.</param>
+    public ConsoleProgressBar(int totalTicks, string description, TextWriter? output = null, bool dynamicColumns = true, string unit = " items", bool isWindows = false)
     {
-        _totalTicks = totalTicks;
-        _description = description;
-        _output = output ?? Console.Error;
-        _dynamicColumns = dynamicColumns;
-        _unit = unit;
-        _isWindows = isWindows;
-        _startTime = DateTime.Now;
-        _currentTick = 0;
+        this.totalTicks = totalTicks;
+        this.description = description;
+        this.output = output ?? Console.Error;
+        this.dynamicColumns = dynamicColumns;
+        this.unit = unit;
+        this.isWindows = isWindows;
+        this.startTime = DateTime.Now;
+        this.currentTick = 0;
 
         // Initial render
-        Render();
+        this.Render();
     }
 
-    public int CurrentTick => _currentTick;
+    /// <summary>
+    /// Gets the total number of ticks (steps) for the progress bar.
+    /// </summary>
+    public int CurrentTick => this.currentTick;
 
+    /// <summary>
+    /// Increments the progress bar by one tick (step).
+    /// </summary>
+    /// <param name="increment">The increment.</param>
     public void Tick(int increment = 1)
     {
-        if (_disposed) return;
-
-        lock (_lock)
+        if (this.disposed)
         {
-            _currentTick = Math.Min(_currentTick + increment, _totalTicks);
-            Render();
+            return;
+        }
+
+        lock (this.@lock)
+        {
+            this.currentTick = Math.Min(this.currentTick + increment, this.totalTicks);
+            this.Render();
+        }
+    }
+
+    /// <summary>
+    /// Disposes of the progress bar, cleaning up any resources used by it.
+    /// </summary>
+    public void Dispose()
+    {
+        if (this.disposed)
+        {
+            return;
+        }
+
+        lock (this.@lock)
+        {
+            this.disposed = true;
+
+            // Final render to complete the progress bar
+            if (this.currentTick < this.totalTicks && this.totalTicks > 0)
+            {
+                this.currentTick = this.totalTicks;
+            }
+
+            this.Render();
+
+            // Move to next line
+            this.output.WriteLine();
+            this.output.Flush();
         }
     }
 
     private void Render()
     {
-        if (_disposed) return;
+        if (this.disposed)
+        {
+            return;
+        }
 
         try
         {
-            var elapsed = DateTime.Now - _startTime;
-            var progress = _totalTicks > 0 ? (double)_currentTick / _totalTicks : 0;
-            var barWidth = GetBarWidth();
-            
+            var elapsed = DateTime.Now - this.startTime;
+            var progress = this.totalTicks > 0 ? (double)this.currentTick / this.totalTicks : 0;
+            var barWidth = this.GetBarWidth();
+
             // Build the progress line
             var sb = new StringBuilder();
 
             // Description
-            if (!string.IsNullOrEmpty(_description))
+            if (!string.IsNullOrEmpty(this.description))
             {
-                sb.Append(_description);
+                sb.Append(this.description);
                 sb.Append(": ");
             }
 
@@ -72,34 +128,34 @@ public class ConsoleProgressBar : IDisposable
             // Progress bar
             sb.Append('|');
             var filledWidth = (int)(progress * barWidth);
-            var progressChar = _isWindows ? '#' : '█';
-            var emptyChar = _isWindows ? '-' : '░';
-            
+            var progressChar = this.isWindows ? '#' : '█';
+            var emptyChar = this.isWindows ? '-' : '░';
+
             sb.Append(new string(progressChar, filledWidth));
             sb.Append(new string(emptyChar, barWidth - filledWidth));
             sb.Append('|');
 
             // Stats
-            if (_totalTicks > 0)
+            if (this.totalTicks > 0)
             {
-                sb.Append($" {_currentTick}/{_totalTicks}");
+                sb.Append($" {this.currentTick}/{this.totalTicks}");
             }
             else
             {
-                sb.Append($" {_currentTick}");
+                sb.Append($" {this.currentTick}");
             }
 
-            if (!string.IsNullOrEmpty(_unit) && _unit != " items")
+            if (!string.IsNullOrEmpty(this.unit) && this.unit != " items")
             {
-                sb.Append(_unit);
+                sb.Append(this.unit);
             }
 
             // Time information
             if (elapsed.TotalSeconds > 0)
             {
                 sb.Append($" [{elapsed:mm\\:ss}");
-                
-                if (progress > 0 && _totalTicks > 0)
+
+                if (progress > 0 && this.totalTicks > 0)
                 {
                     var estimatedTotal = TimeSpan.FromSeconds(elapsed.TotalSeconds / progress);
                     var remaining = estimatedTotal - elapsed;
@@ -108,16 +164,17 @@ public class ConsoleProgressBar : IDisposable
                         sb.Append($"<{remaining:mm\\:ss}");
                     }
                 }
+
                 sb.Append(']');
             }
 
             var currentLine = sb.ToString();
-            
+
             // Clear the current line and write the new content
-            _output.Write($"\r{new string(' ', Math.Max(_lastRendered.Length, currentLine.Length))}\r{currentLine}");
-            _output.Flush();
-            
-            _lastRendered = currentLine;
+            this.output.Write($"\r{new string(' ', Math.Max(this.lastRendered.Length, currentLine.Length))}\r{currentLine}");
+            this.output.Flush();
+
+            this.lastRendered = currentLine;
         }
         catch
         {
@@ -127,42 +184,23 @@ public class ConsoleProgressBar : IDisposable
 
     private int GetBarWidth()
     {
-        if (!_dynamicColumns)
+        if (!this.dynamicColumns)
+        {
             return 20;
+        }
 
         try
         {
             var consoleWidth = Console.WindowWidth;
-            var reservedSpace = _description?.Length ?? 0;
+            var reservedSpace = this.description?.Length ?? 0;
             reservedSpace += 50; // Space for percentage, counts, time, etc.
-            
+
             var availableWidth = Math.Max(20, consoleWidth - reservedSpace);
             return Math.Min(60, availableWidth);
         }
         catch
         {
             return 20; // Fallback if console width detection fails
-        }
-    }
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        
-        lock (_lock)
-        {
-            _disposed = true;
-            
-            // Final render to complete the progress bar
-            if (_currentTick < _totalTicks && _totalTicks > 0)
-            {
-                _currentTick = _totalTicks;
-            }
-            Render();
-            
-            // Move to next line
-            _output.WriteLine();
-            _output.Flush();
         }
     }
 }
