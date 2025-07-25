@@ -90,8 +90,10 @@ jobs:
   release:
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
     - uses: actions/checkout@v4
 
