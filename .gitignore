@@ -3,6 +3,9 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+dist/
+dist-windows/
+
 # dotenv files
 .env
 
