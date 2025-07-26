@@ -7,6 +7,11 @@
     <Nullable>enable</Nullable>
     <PublishAot>true</PublishAot>
     <AssemblyName>ffpb</AssemblyName>
+    
+    <!-- Code signing properties for macOS -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>
