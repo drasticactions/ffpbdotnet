@@ -88,7 +88,7 @@ elif [ -n "$APPLE_CERTIFICATE_BASE64" ]; then
     security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temp" build.keychain
     
     # Find signing identity
-    APPLE_CODESIGN_IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep "Apple Development" | head -1 | grep -o '"[^"]*"' | tr -d '"')
+    APPLE_CODESIGN_IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | grep -o '"[^"]*"' | tr -d '"')
     
     # Clean up certificate file
     rm certificate.p12
@@ -150,13 +150,29 @@ if [ "$NOTARIZE" = true ]; then
     zip -r ../ffpb-notarize.zip ffpb
     cd ..
     
-    # Submit for notarization
+    # Submit for notarization and capture output
     echo "Submitting binary for notarization..."
-    xcrun notarytool submit ffpb-notarize.zip \
+    NOTARY_OUTPUT=$(xcrun notarytool submit ffpb-notarize.zip \
       --apple-id "$APPLE_ID" \
       --password "$APPLE_APP_PASSWORD" \
       --team-id "$APPLE_TEAM_ID" \
-      --wait
+      --wait --output-format json)
+    
+    STATUS=$(echo "$NOTARY_OUTPUT" | grep -o '"status":[^,}]*' | cut -d: -f2 | tr -d ' "')
+    REQUEST_ID=$(echo "$NOTARY_OUTPUT" | grep -o '"id":[^,}]*' | head -1 | cut -d: -f2 | tr -d ' "')
+    
+    if [ "$STATUS" != "Accepted" ]; then
+        echo "❌ Notarization failed or returned status: $STATUS"
+        if [ -n "$REQUEST_ID" ]; then
+            echo "Fetching notarization log for request ID: $REQUEST_ID"
+            xcrun notarytool log "$REQUEST_ID" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_APP_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID"
+        fi
+        rm ffpb-notarize.zip
+        exit 1
+    fi
     
     # Clean up
     rm ffpb-notarize.zip
@@ -168,14 +184,6 @@ fi
 # Clean up temp files
 rm -rf "$TEMP_DIR"
 
-# Create zip file for artifacts
-echo "Creating zip file for artifacts..."
-cd "$OUTPUT_DIR"
-zip -r ../ffpb-macos.zip ffpb
-cd ..
-
-echo "Universal macOS binary created at: $OUTPUT_DIR/ffpb"
-echo "Artifact zip created at: ffpb-macos.zip"
 echo "File info:"
 file "$OUTPUT_DIR/ffpb"
 
