@@ -168,7 +168,14 @@ fi
 # Clean up temp files
 rm -rf "$TEMP_DIR"
 
+# Create zip file for artifacts
+echo "Creating zip file for artifacts..."
+cd "$OUTPUT_DIR"
+zip -r ../ffpb-macos.zip ffpb
+cd ..
+
 echo "Universal macOS binary created at: $OUTPUT_DIR/ffpb"
+echo "Artifact zip created at: ffpb-macos.zip"
 echo "File info:"
 file "$OUTPUT_DIR/ffpb"
 
