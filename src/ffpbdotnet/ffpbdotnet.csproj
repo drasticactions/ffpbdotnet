@@ -7,8 +7,6 @@
     <Nullable>enable</Nullable>
     <PublishAot>true</PublishAot>
     <AssemblyName>ffpb</AssemblyName>
-    
-    <!-- Code signing properties for macOS -->
     <PublishTrimmed>true</PublishTrimmed>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
@@ -19,5 +17,11 @@
 			<PrivateAssets>All</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+  </ItemGroup>
+
+  <!-- Include Info.plist when building on a mac -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <Content Include="Info.plist" CopyToOutputDirectory="PreserveNewest" />
+    <LinkerArg Include="-sectcreate __TEXT __info_plist Info.plist;" />
   </ItemGroup>
 </Project>
