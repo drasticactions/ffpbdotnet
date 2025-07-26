@@ -78,46 +78,17 @@ jobs:
       with:
         global-json-file: global.json
 
-    - name: Import signing certificate
-      if: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
-      env:
-        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      run: |
-        # Create certificate file
-        echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
-        
-        # Create temporary keychain
-        security create-keychain -p "$RUNNER_TEMP" build.keychain
-        security default-keychain -s build.keychain
-        security unlock-keychain -p "$RUNNER_TEMP" build.keychain
-        
-        # Import certificate
-        security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-        security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$RUNNER_TEMP" build.keychain
-        
-        # Clean up certificate file
-        rm certificate.p12
-        
-        # Find and export signing identity for build script
-        IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | grep -o '"[^"]*"' | tr -d '"')
-        echo "APPLE_CODESIGN_IDENTITY=$IDENTITY" >> $GITHUB_ENV
-
     - name: Make build script executable
       run: chmod +x build-macos.sh
 
     - name: Build, sign, and notarize macOS binary
       env:
+        APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         APPLE_ID: ${{ secrets.APPLE_ID }}
         APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      run: |
-        # Build with signing, add notarization if credentials are available
-        if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
-          ./build-macos.sh --notarize
-        else
-          ./build-macos.sh
-        fi
+      run: ./build-macos.sh --notarize
 
     - name: Create macOS archive
       run: tar -czf ffpb-macos-universal.tar.gz -C dist .
