@@ -106,7 +106,7 @@ jobs:
     - name: Make build script executable
       run: chmod +x build-macos.sh
 
-    - name: Build, sign, and optionally notarize macOS binary
+    - name: Build, sign, and notarize macOS binary
       env:
         APPLE_ID: ${{ secrets.APPLE_ID }}
         APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}

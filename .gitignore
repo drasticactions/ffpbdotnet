@@ -5,6 +5,7 @@
 
 dist/
 dist-windows/
+ffpb-notarize.zip
 
 # dotenv files
 .env
