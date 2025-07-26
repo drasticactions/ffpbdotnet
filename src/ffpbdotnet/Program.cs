@@ -14,6 +14,12 @@ internal class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        if (args.Length == 0)
+        {
+            ShowHelp();
+            return 0;
+        }
+
         try
         {
             using var notifier = new ProgressNotifier();
@@ -118,5 +124,24 @@ internal class Program
             Console.Error.WriteLine($"Unexpected exception: {ex.Message}");
             return 1;
         }
+    }
+
+    private static void ShowHelp()
+    {
+        var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+
+        Console.WriteLine($"ffpb v{version}");
+        Console.WriteLine("A progress bar wrapper for ffmpeg");
+        Console.WriteLine();
+        Console.WriteLine("Usage:");
+        Console.WriteLine("  ffpb [ffmpeg options]");
+        Console.WriteLine();
+        Console.WriteLine("Examples:");
+        Console.WriteLine("  ffpb -i input.mp4 -c:v libx264 -crf 23 output.mp4");
+        Console.WriteLine("  ffpb -i input.avi -c:v copy -c:a aac output.mp4");
+        Console.WriteLine("  ffpb -i input.mov -vf scale=1280:720 -c:v libx264 output.mp4");
+        Console.WriteLine();
+        Console.WriteLine("This tool wraps ffmpeg and displays a progress bar during conversion.");
+        Console.WriteLine("All ffmpeg options are supported - just pass them as arguments.");
     }
 }
