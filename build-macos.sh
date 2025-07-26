@@ -88,7 +88,7 @@ elif [ -n "$APPLE_CERTIFICATE_BASE64" ]; then
     security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "temp" build.keychain
     
     # Find signing identity
-    APPLE_CODESIGN_IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -1 | grep -o '"[^"]*"' | tr -d '"')
+    APPLE_CODESIGN_IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep "Apple Development" | head -1 | grep -o '"[^"]*"' | tr -d '"')
     
     # Clean up certificate file
     rm certificate.p12
