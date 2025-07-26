@@ -3,6 +3,7 @@
 # Build script for universal macOS binary with optional code signing and notarization
 set -e
 
+ENTITLEMENTS_PATH="Entitlements.plist"
 PROJECT_PATH="src/ffpbdotnet/ffpbdotnet.csproj"
 OUTPUT_DIR="dist"
 TEMP_DIR="temp"
@@ -104,6 +105,8 @@ fi
 if [ -n "$APPLE_CODESIGN_IDENTITY" ]; then
     echo "🔏 Code signing with identity: $APPLE_CODESIGN_IDENTITY"
     codesign --sign "$APPLE_CODESIGN_IDENTITY" \
+             --force \
+             --entitlements "$ENTITLEMENTS_PATH" \
              --options runtime \
              --timestamp \
              --verbose \
@@ -173,7 +176,7 @@ if [ "$NOTARIZE" = true ]; then
         rm ffpb-notarize.zip
         exit 1
     fi
-    
+
     # Clean up
     rm ffpb-notarize.zip
     echo "✅ Binary notarized successfully"
